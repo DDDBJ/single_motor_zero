@@ -66,6 +66,18 @@ namespace robot
         double dir_;
     };
 
+    //velosity control
+    class MoveVelosity :public aris::core::CloneObject<MoveVelosity, aris::plan::Plan>
+    {
+    public:
+        auto virtual prepareNrt()->void;
+        auto virtual executeRT()->int;
+
+        virtual ~MoveVelosity();
+        explicit MoveVelosity(const std::string &name = "move_velosity");
+    private:
+        double dir_;
+    };
 
     auto createControllerQuadruped()->std::unique_ptr<aris::control::Controller>;
     auto createPlanQuadruped()->std::unique_ptr<aris::plan::PlanRoot>;

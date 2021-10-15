@@ -188,6 +188,7 @@ auto MoveJoint::executeRT()->int
 {
     // pos //
     static double begin_pos;
+    static double pos_now;
     if (count() == 1)
     {
         begin_pos = controller()->motionPool()[0].actualPos();
@@ -202,7 +203,9 @@ auto MoveJoint::executeRT()->int
     // read toeque //
     std::int16_t torque=0;
     this->ecController()->motionPool()[0].readPdo(0x6077,0x00,torque);
-    mout()<< torque <<std::endl;
+    pos_now = controller()->motionPool()[0].actualPos();
+    mout()<< "torque: " << torque <<std::endl;
+    mout()<< "posnow: " << pos_now <<std::endl;
 
     return s1.getTc() *1000 -count();
 }
@@ -246,6 +249,65 @@ MoveTorque::MoveTorque(const std::string &name)
 }
 MoveTorque::~MoveTorque() = default;
 
+//move joint velosity //
+auto MoveVelosity::prepareNrt()->void
+{
+    dir_ = doubleParam("direction");
+    for(auto &m:motorOptions()) m = aris::plan::Plan::NOT_CHECK_ENABLE;
+}
+auto MoveVelosity::executeRT()->int
+{
+    static double step_velosity = 0.02;
+    static double Velosity = 0;
+    static double Velosity_desired = 0;
+    static double max_vel=10;
+    static double pos;
+    static double pos_start;
+    static double pos_step = -PI;
+    static double pos_target;
+    static double pos_error;
+    static double pos_error_sum = 0;
+    static double kp = 1;
+    static double ki = 0.02;
+    // read vel //
+    if(count() == 1){
+    this->ecController()->motionPool()[0].readPdo(0x6077,0x00,Velosity);
+//    this->ecController()->motionPool()[0].readPdo(0x6064,0x00,pos_start);
+    pos_start = controller()->motionPool()[0].actualPos();
+    mout() << "vel: " << Velosity  << std::endl;
+    mout() << "pos: " << pos_start << std::endl;
+    pos_target = pos_start + pos_step;
+    mout() << "pos target: " << pos_target << std::endl;
+    }
+    //PI control
+    pos = controller()->motionPool()[0].actualPos();
+    pos_error     =  pos_target - pos;
+    pos_error_sum += pos_error * 0.001;
+    Velosity_desired = kp * pos_error + ki * pos_error_sum;
+    mout() << "pos: " << pos << std::endl;
+    mout() << "pos_error: " << pos_error << std::endl;
+    mout() << "pos_error_sum: " << pos_error_sum << std::endl;
+    mout() << "Velosity_desired: " << Velosity_desired << std::endl;
+    //max acc to set velosity & velosity < max_vel
+    if(Velosity_desired > max_vel)Velosity_desired = max_vel;
+    if(Velosity_desired - Velosity > step_velosity)Velosity += step_velosity;
+    else if (Velosity_desired - Velosity)Velosity -= step_velosity;
+    else{Velosity = Velosity_desired;}
+    controller()->motionPool()[0].setTargetVel(Velosity);
+//    if (Velosity <= 0.01 & abs(pos - pos_target) <=0.01)return 0;
+    mout() << "velosity" << Velosity << std::endl;
+    if (abs(Velosity) <= step_velosity && abs(pos_error) <=0.1){controller()->motionPool()[0].setTargetVel(0);return 0;}
+    return 1;
+
+}
+MoveVelosity::MoveVelosity(const std::string &name)
+{
+    aris::core::fromXmlString(command(),
+       "<Command name=\"mvv\">"
+        "<Param name=\"direction\" default=\"1\" abbreviation=\"d\"/>"
+        "</Command>");
+}
+MoveVelosity::~MoveVelosity() = default;
 
 auto createControllerQuadruped()->std::unique_ptr<aris::control::Controller>
 {
@@ -292,40 +354,6 @@ auto createControllerQuadruped()->std::unique_ptr<aris::control::Controller>
         };
 
         int phy_id[12]={0,1};
-
-        //elmo
-//        std::string xml_str =
-//           "<EthercatMotor phy_id=\"" + std::to_string(phy_id[i]) + "\" product_code=\"0x00\""
-//           " vendor_id=\"0x00\" revision_num=\"0x00\" dc_assign_activate=\"0x0300\""
-//           " min_pos=\"" + std::to_string(min_pos[i]) + "\" max_pos=\"" + std::to_string(max_pos[i]) + "\" max_vel=\"" + std::to_string(max_vel[i]) + "\" min_vel=\"" + std::to_string(-max_vel[i]) + "\""
-//           " max_acc=\"" + std::to_string(max_acc[i]) + "\" min_acc=\"" + std::to_string(-max_acc[i]) + "\" max_pos_following_error=\"10.0\" max_vel_following_error=\"20.0\""
-//           " home_pos=\"0\" pos_factor=\"" + std::to_string(pos_factor[i]) + "\" pos_offset=\"" + std::to_string(pos_offset[i]) + "\">"
-//           "	<SyncManagerPoolObject>"
-//           "		<SyncManager is_tx=\"false\"/>"
-//           "		<SyncManager is_tx=\"true\"/>"
-//           "		<SyncManager is_tx=\"false\">"
-//           "			<Pdo index=\"0x1605\" is_tx=\"false\">"
-//           "				<PdoEntry name=\"target_pos\" index=\"0x607A\" subindex=\"0x00\" size=\"32\"/>"
-//           "				<PdoEntry name=\"target_vel\" index=\"0x60FF\" subindex=\"0x00\" size=\"32\"/>"
-//           "				<PdoEntry name=\"targer_toq\" index=\"0x6071\" subindex=\"0x00\" size=\"16\"/>"
-//           "				<PdoEntry name=\"max_toq\" index=\"0x6072\" subindex=\"0x00\" size=\"16\"/>"
-//           "				<PdoEntry name=\"control_word\" index=\"0x6040\" subindex=\"0x00\" size=\"16\"/>"
-//           "				<PdoEntry name=\"mode_of_operation\" index=\"0x6060\" subindex=\"0x00\" size=\"8\"/>"
-//           "			</Pdo>"
-//           "		</SyncManager>"
-//           "		<SyncManager is_tx=\"true\">"
-//           "			<Pdo index=\"0x1A07\" is_tx=\"true\">"
-//           "				<PdoEntry name=\"status_word\" index=\"0x6041\" subindex=\"0x00\" size=\"16\"/>"
-//           "				<PdoEntry name=\"mode_of_display\" index=\"0x6061\" subindex=\"0x00\" size=\"8\"/>"
-//           "				<PdoEntry name=\"pos_actual_value\" index=\"0x6064\" subindex=\"0x00\" size=\"32\"/>"
-//           "				<PdoEntry name=\"vel_actual_value\" index=\"0x606c\" subindex=\"0x00\" size=\"32\"/>"
-//           "				<PdoEntry name=\"toq_actual_value\" index=\"0x6077\" subindex=\"0x00\" size=\"16\"/>"
-//           "			</Pdo>"
-//           "		</SyncManager>"
-//           "	</SyncManagerPoolObject>"
-//           "</EthercatMotor>";
-
-
 
         //zero_err
         std::string xml_str =
@@ -409,6 +437,7 @@ auto createPlanQuadruped()->std::unique_ptr<aris::plan::PlanRoot>
     plan_root->planPool().add<MoveJoint>();
     plan_root->planPool().add<MoveTorque>();
     plan_root->planPool().add<ReadJoint>();
+    plan_root->planPool().add<MoveVelosity>();
     return plan_root;
 }
 
