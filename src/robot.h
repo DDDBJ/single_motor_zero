@@ -1,4 +1,6 @@
-﻿#ifndef ROBOT_H_
+﻿
+
+#ifndef ROBOT_H_
 #define ROBOT_H_
 
 #include <memory>
@@ -39,6 +41,16 @@ namespace robot
         explicit MoveJS(const std::string& name = "MoveJS_plan");
 
     };
+
+    class DogHome :public aris::core::CloneObject<DogHome, aris::plan::Plan>
+    {
+    public:
+        auto virtual prepareNrt()->void;
+        auto virtual executeRT()->int;
+
+        virtual ~DogHome();
+        explicit DogHome(const std::string &name = "dog_home");
+    };
     
     //move joint pos
     class MoveJoint : public aris::core::CloneObject<MoveJoint, aris::plan::Plan>
@@ -49,6 +61,19 @@ namespace robot
         auto virtual collectNrt()->void;
 
         explicit MoveJoint(const std::string &name = "MoveJiont");
+    private:
+        double dir_;
+    };
+
+    //move joint pos
+    class MoveJ : public aris::core::CloneObject<MoveJ, aris::plan::Plan>
+    {
+    public:
+        auto virtual prepareNrt()->void;
+        auto virtual executeRT()->int;
+        auto virtual collectNrt()->void;
+
+        explicit MoveJ(const std::string &name = "MoveJ");
     private:
         double dir_;
     };
@@ -66,7 +91,7 @@ namespace robot
         double dir_;
     };
 
-    //velosity control
+    //velosity control single motor
     class MoveVelosity :public aris::core::CloneObject<MoveVelosity, aris::plan::Plan>
     {
     public:
@@ -79,8 +104,75 @@ namespace robot
         double dir_;
     };
 
-    auto createControllerQuadruped()->std::unique_ptr<aris::control::Controller>;
-    auto createPlanQuadruped()->std::unique_ptr<aris::plan::PlanRoot>;
+    //velosity control seven robot
+    class MoveL :public aris::core::CloneObject<MoveL, aris::plan::Plan>
+    {
+    public:
+        auto virtual prepareNrt()->void;
+        auto virtual executeRT()->int;
+
+        virtual ~MoveL();
+        explicit MoveL(const std::string &name = "move_l");
+    private:
+        double dir_;
+    };
+
+    class MoveScrew :public aris::core::CloneObject<MoveScrew, aris::plan::Plan>
+    {
+    public:
+        auto virtual prepareNrt()->void;
+        auto virtual executeRT()->int;
+
+        virtual ~MoveScrew();
+        explicit MoveScrew(const std::string &name = "move_screw");
+    private:
+        double dir_;
+    };
+
+    class MoveSingleMotor :public aris::core::CloneObject<MoveSingleMotor, aris::plan::Plan>
+    {
+    public:
+        auto virtual prepareNrt()->void;
+        auto virtual executeRT()->int;
+
+        virtual ~MoveSingleMotor();
+        explicit MoveSingleMotor(const std::string &name = "move_single_motor");
+    private:
+        double dir_;
+        int m_id;
+        double dist;
+    };
+
+
+    class MoveSingleTest :public aris::core::CloneObject<MoveSingleMotor, aris::plan::Plan>{
+    public:
+        auto virtual prepareNrt()->void;
+        auto virtual executeRT()->int;
+
+        virtual ~MoveSingleTest();
+        explicit MoveSingleTest(const std::string &name = "move_single_test");
+    private:
+        double dir_;
+        int m_id;
+        double dist;
+    };
+
+    class ReadSingleMotor :public aris::core::CloneObject<ReadSingleMotor, aris::plan::Plan>
+    {
+    public:
+        auto virtual prepareNrt()->void;
+        auto virtual executeRT()->int;
+
+        virtual ~ReadSingleMotor();
+        explicit ReadSingleMotor(const std::string &name = "move_single_motor");
+    private:
+        double dir_;
+        int m_id;
+        double dist;
+    };
+
+    auto createControllerSevenRobot()->std::unique_ptr<aris::control::Controller>;
+    auto createPlanSevenRobot()->std::unique_ptr<aris::plan::PlanRoot>;
 }
 
 #endif

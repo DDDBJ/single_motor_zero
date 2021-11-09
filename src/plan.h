@@ -21,10 +21,12 @@ private:
 public:
 	auto getTCurve(int count)->double;
 	auto getCurveParam()->void;
-	auto getTc()->double { return Tc_; };
+    auto getTc()->double { return Tc_; }
 	TCurve(double a, double v) { a_ = a; v_ = v; }
 	~TCurve() {}
 };
+
+
 
 #endif
 

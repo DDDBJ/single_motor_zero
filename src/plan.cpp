@@ -30,7 +30,7 @@ auto TCurve::getTCurve(int count)->double
 		}
 	}
 	else    //ÌÝÐÎÇúÏß
-	{
+    {
 		if (t < ta_ * 1000)
 		{
 			s = 0.5 * a_ * t * t / 1000.0 / 1000.0;
@@ -66,6 +66,7 @@ auto TCurve::getCurveParam()->void
 	}
 	this->ta_ = v_ / a_;
 }
+
 
 
 
